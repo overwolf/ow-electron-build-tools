@@ -1,0 +1,48 @@
+name: Sync Upstream Repo
+
+# Trigger this workflow on a schedule or manually
+on:
+  schedule:
+    # Run every 6 hours (adjust as needed)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout your fork repository
+      - name: Checkout Fork Repository
+        uses: actions/checkout@v3
+        with:
+          ref: main  # Replace with your default branch name
+
+      # Set Git user name and email
+      - name: Set Git User
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Add the upstream (original) repository
+      - name: Add Upstream Repository
+        run: |
+          git remote add upstream https://github.com/electron/build-tools.git
+          git fetch upstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pull and Rebase changes from upstream
+      - name: Pull and Rebase
+        run: |
+          git checkout main  # Replace with your default branch
+          git pull --rebase upstream main  # Replace with branch you want to sync from
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Push the changes back to your fork
+      - name: Push Changes to Fork
+        run: |
+          git push origin main --force  # Replace with your default branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
