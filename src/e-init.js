@@ -21,6 +21,9 @@ const archOption = new Option(
   'Set the desired architecture for the build',
 ).choices(['x86', 'x64', 'arm', 'arm64']);
 
+
+let customRepo = null;
+
 function createConfig(options) {
   const root = resolvePath(options.root);
   const homedir = os.homedir();
@@ -54,8 +57,15 @@ function createConfig(options) {
       fork: options.useHttps
         ? `https://github.com/${options.fork}.git`
         : `git@github.com:${options.fork}.git`,
-    }),
+    })
   };
+
+  customRepo = null;
+  if (options.url) {
+    electron.origin = `${options.url}.git`;
+    customRepo = options.url;
+    console.log(`set custom electron repository url '${electron.origin}'`);
+  }
 
   return {
     $schema: URI.file(path.resolve(__dirname, '..', 'evm-config.schema.json')).toString(),
@@ -80,7 +90,7 @@ function createConfig(options) {
 }
 
 function runGClientConfig(config) {
-  const { root } = config;
+  const { root} = config;
   depot.ensure();
   const exec = 'gclient';
   const args = [
@@ -88,7 +98,7 @@ function runGClientConfig(config) {
     '--name',
     'src/electron',
     '--unmanaged',
-    'https://github.com/electron/electron',
+    customRepo || 'https://github.com/electron/electron',
   ];
   const opts = {
     cwd: root,
@@ -162,6 +172,10 @@ program
   .option(
     '--fork <username/electron>',
     `Add a remote fork of Electron with the name 'fork'. This should take the format 'username/electron'`,
+  )
+  .option(
+    '--url <target>',
+    `Set a custom Electron build repository url. This should take the format 'https://www.foo.com/foo.git'`,
   )
   .action((name, options) => {
     if (options.import && !options.out) {
