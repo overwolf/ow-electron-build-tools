@@ -14,7 +14,7 @@
     "test": "nyc --reporter=lcov --reporter=text-summary vitest run --reporter=verbose --exclude tests/bootstrap.spec.mjs",
     "test:all": "nyc --reporter=lcov --reporter=text-summary vitest run --reporter=verbose"
   },
-  "repository": "https://github.com/electron/build-tools",
+  "repository": "https://github.com/overwolf/ow-electron-build-tools.git",
   "author": "Electron Authors",
   "license": "MIT",
   "dependencies": {
