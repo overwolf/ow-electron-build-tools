@@ -21,7 +21,6 @@ const archOption = new Option(
   'Set the desired architecture for the build',
 ).choices(['x86', 'x64', 'arm', 'arm64']);
 
-
 let customRepo = null;
 
 function createConfig(options) {
@@ -57,7 +56,7 @@ function createConfig(options) {
       fork: options.useHttps
         ? `https://github.com/${options.fork}.git`
         : `git@github.com:${options.fork}.git`,
-    })
+    }),
   };
 
   customRepo = null;
@@ -90,7 +89,7 @@ function createConfig(options) {
 }
 
 function runGClientConfig(config) {
-  const { root} = config;
+  const { root } = config;
   depot.ensure();
   const exec = 'gclient';
   const args = [
