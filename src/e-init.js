@@ -88,7 +88,7 @@ function createConfig(options) {
   };
 }
 
-function runGClientConfig(config) {
+function runGClientConfig(config, customArg) {
   const { root } = config;
   depot.ensure();
   const exec = 'gclient';
@@ -99,6 +99,12 @@ function runGClientConfig(config) {
     '--unmanaged',
     customRepo || 'https://github.com/electron/electron',
   ];
+
+  if (customArg) {
+    args.push(`${customArg}`);
+    console.log('set custom arg:', customArg);
+  }
+
   const opts = {
     cwd: root,
     shell: true,
@@ -110,7 +116,7 @@ function runGClientConfig(config) {
   }
 }
 
-function ensureRoot(config, force) {
+function ensureRoot(config, force, customArg) {
   const { root } = config;
 
   ensureDir(root);
@@ -124,7 +130,7 @@ function ensureRoot(config, force) {
     console.info(`${color.info} Root ${color.path(root)} already exists.`);
     console.info(`${color.info} (OK if you are sharing ${root} between multiple build configs)`);
   } else {
-    runGClientConfig(config);
+    runGClientConfig(config, customArg);
   }
 }
 
@@ -176,6 +182,7 @@ program
     '--url <target>',
     `Set a custom Electron build repository url. This should take the format 'https://www.foo.com/foo.git'`,
   )
+  .option('--custom-arg <target>', `Set a custom argument when calling running GClient config`)
   .action((name, options) => {
     if (options.import && !options.out) {
       // e.g. the default out dir for a testing build is 'Testing'
@@ -221,7 +228,7 @@ program
         }
       }
 
-      ensureRoot(config, !!options.force);
+      ensureRoot(config, !!options.force, options.customArg);
 
       // (maybe) run sync to ensure external binaries are downloaded
       if (options.bootstrap) {
