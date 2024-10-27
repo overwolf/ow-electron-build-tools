@@ -10,20 +10,19 @@ const { color, fatal } = require('./utils/logging');
 const depot = require('./utils/depot-tools');
 const { ensureDir } = require('./utils/paths');
 const reclient = require('./utils/reclient');
-const { loadXcode } = require('./utils/load-xcode');
 const { ensureSDK, ensureSDKAndSymlink } = require('./utils/sdk');
 
 function getGNArgs(config) {
   const configArgs = config.gen.args;
 
-  if (config.onlySdk && process.platform === 'darwin') {
+  if (process.platform === 'darwin') {
     configArgs.push(`mac_sdk_path = "${ensureSDKAndSymlink(config)}"`);
   }
 
   // GN_EXTRA_ARGS is a list of GN args to append to the default args.
   const { GN_EXTRA_ARGS } = process.env;
   if (process.env.CI && GN_EXTRA_ARGS) {
-    const envArgs = GN_EXTRA_ARGS.split(' ').map(s => s.trim());
+    const envArgs = GN_EXTRA_ARGS.split(' ').map((s) => s.trim());
     return [...configArgs, ...envArgs].join(os.EOL);
   }
 
@@ -60,7 +59,7 @@ function runNinja(config, target, ninjaArgs) {
     reclient.auth(config);
 
     // Autoninja sets this absurdly high, we take it down a notch
-    if (!ninjaArgs.includes('-j') && !ninjaArgs.find(arg => /^-j[0-9]+$/.test(arg.trim()))) {
+    if (!ninjaArgs.includes('-j') && !ninjaArgs.find((arg) => /^-j[0-9]+$/.test(arg.trim()))) {
       ninjaArgs.push('-j', 200);
     }
   } else {
@@ -101,11 +100,7 @@ program
       reclient.downloadAndPrepare(config);
 
       if (process.platform === 'darwin') {
-        if (config.onlySdk) {
-          ensureSDK();
-        } else {
-          loadXcode({ quiet: true });
-        }
+        ensureSDK();
       }
 
       if (options.onlyGen) {

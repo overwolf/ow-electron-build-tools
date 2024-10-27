@@ -12,7 +12,6 @@ const { color, fatal } = require('./utils/logging');
 const { resolvePath, ensureDir } = require('./utils/paths');
 const depot = require('./utils/depot-tools');
 const { checkGlobalGitConfig } = require('./utils/git');
-const { loadXcode } = require('./utils/load-xcode');
 const { ensureSDK } = require('./utils/sdk');
 
 // https://gn.googlesource.com/gn/+/main/docs/reference.md?pli=1#var_target_cpu
@@ -77,8 +76,7 @@ function createConfig(options) {
       args: gn_args,
       out: options.out,
     },
-    preserveXcode: 5,
-    onlySdk: options.onlySdk,
+    preserveSDK: 5,
     env: {
       CHROMIUM_BUILDTOOLS_PATH: path.resolve(root, 'src', 'buildtools'),
       GIT_CACHE_PATH: process.env.GIT_CACHE_PATH
@@ -121,7 +119,7 @@ function ensureRoot(config, force, customArg) {
 
   ensureDir(root);
 
-  const hasOtherFiles = fs.readdirSync(root).some(file => file !== '.gclient');
+  const hasOtherFiles = fs.readdirSync(root).some((file) => file !== '.gclient');
   if (hasOtherFiles && !force) {
     fatal(`Root ${color.path(root)} is not empty. Please choose a different root directory.`);
   }
@@ -154,11 +152,6 @@ program
   .option('--msan', `When building, enable clang's memory sanitizer`, false)
   .option('--lsan', `When building, enable clang's leak sanitizer`, false)
   .option('--mas', 'Build for the macOS App Store', false)
-  .option(
-    '--only-sdk',
-    'Use macOS SDKs instead of downloading full XCode versions when necessary',
-    false,
-  )
   .addOption(archOption)
   .option('--bootstrap', 'Run `e sync` and `e build` after creating the build config.')
   .addOption(
@@ -219,13 +212,9 @@ program
       const opts = { stdio: 'inherit' };
       childProcess.execFileSync(process.execPath, [e, 'use', name], opts);
 
-      // ensure xcode is loaded
+      // ensure macOS SDKs are loaded
       if (process.platform === 'darwin') {
-        if (options.onlySdk) {
-          ensureSDK();
-        } else {
-          loadXcode();
-        }
+        ensureSDK();
       }
 
       ensureRoot(config, !!options.force, options.customArg);

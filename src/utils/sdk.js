@@ -1,4 +1,5 @@
 const cp = require('child_process');
+const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
 const semver = require('semver');
@@ -14,6 +15,10 @@ const SDKZip = path.resolve(SDKDir, 'MacOSX.sdk.zip');
 const XcodeBaseURL = 'https://dev-cdn.electronjs.org/xcode/';
 
 const SDKs = {
+  '15.0': {
+    fileName: 'MacOSX-15.0.sdk.zip',
+    sha256: '03d6d8d9a06aebee886cf136168ccbdb8579b80f7193376a36075ddde06abd88',
+  },
   '14.0': {
     fileName: 'MacOSX-14.0.sdk.zip',
     sha256: '63c0e69c60c3e0f25b42726fc3a0f0f2902b5cac304d78456c33e13f9dd6d081',
@@ -34,7 +39,7 @@ const SDKs = {
 
 const fallbackSDK = () => {
   const semverFallback = Object.keys(SDKs)
-    .map(v => semver.valid(semver.coerce(v)))
+    .map((v) => semver.valid(semver.coerce(v)))
     .sort(semver.rcompare)[0];
   return semverFallback.substring(0, semverFallback.length - 2);
 };
@@ -53,14 +58,44 @@ function getSDKVersion() {
   return json.MinimalDisplayName;
 }
 
+function removeUnusedSDKs() {
+  const recent = fs
+    .readdirSync(SDKDir)
+    .map((sdk) => {
+      const sdkPath = path.join(SDKDir, sdk);
+      const { atime } = fs.statSync(sdkPath);
+      return { name: sdkPath, atime };
+    })
+    .sort((a, b) => b.atime - a.atime);
+
+  const { preserveSDK } = evmConfig.current();
+  for (const { name } of recent.slice(preserveSDK)) {
+    deleteDir(name);
+  }
+}
+
+// Potentially remove unused Xcode versions.
+function maybeRemoveOldXcodes() {
+  const XcodeDir = path.resolve(__dirname, '..', '..', 'third_party', 'Xcode');
+  if (fs.existsSync(XcodeDir)) {
+    deleteDir(XcodeDir);
+  }
+}
+
+// Extract the SDK version from the toolchain file and normalize it.
 function extractSDKVersion(toolchainFile) {
   if (!fs.existsSync(toolchainFile)) {
     return null;
   }
 
   const contents = fs.readFileSync(toolchainFile, 'utf8');
-  const match = /macOS \d+(?:\.\d+)? SDK\n\# \((\d+\.\d+)/.exec(contents);
-  return match ? match[1] : null;
+  const match = /macOS\s(\d+(\.\d+)?)\sSDK\n\#/.exec(contents);
+
+  if (!match) {
+    return null;
+  }
+
+  return match[1].includes('.') ? match[1] : `${match[1]}.0`;
 }
 
 function expectedSDKVersion() {
@@ -82,6 +117,44 @@ function expectedSDKVersion() {
   }
 
   return version;
+}
+
+// Ensure that the user has a version of Xcode installed and usable.
+function ensureViableXCode() {
+  const xcodeBuildExec = '/usr/bin/xcodebuild';
+  if (fs.existsSync(xcodeBuildExec)) {
+    const result = cp.spawnSync(xcodeBuildExec, ['-version']);
+    if (result.status === 0) {
+      const match = result.stdout
+        .toString()
+        .trim()
+        .match(/Xcode (\d+\.\d+)/);
+      if (match) {
+        if (!semver.satisfies(semver.coerce(match[1]), '>14')) {
+          fatal(`Xcode version ${match[1]} is not supported, please upgrade to Xcode 15 or newer`);
+        } else {
+          return;
+        }
+      }
+    }
+  }
+
+  fatal(`Xcode appears to be missing, you may have Command Line Tools installed but not a full Xcode. Please install Xcode now...
+
+You can get Xcode from the app store: ${chalk.cyan(
+    'https://apps.apple.com/us/app/xcode/id497799835',
+  )}
+Or directly from Apple Developer: ${chalk.cyan('https://developer.apple.com/xcode')}
+
+If you have Xcode downloaded and are still seeing this make sure you have:
+  1. Opened Xcode at least once and gotten to the "Create new project" screen
+  2. Switched to your installed Xcode with ${chalk.green(
+    'sudo xcode-select -s /Applications/Xcode.app',
+  )}
+
+You can validate your install with "${chalk.green(
+    '/usr/bin/xcodebuild -version',
+  )}" once you are ready or just run this command again`);
 }
 
 function ensureSDKAndSymlink(config) {
@@ -107,6 +180,8 @@ function ensureSDK() {
     console.log('TEST: ensureSDK called');
     return;
   }
+
+  ensureViableXCode();
 
   const expected = expectedSDKVersion();
   const eventualVersionedPath = path.resolve(SDKDir, `MacOSX${expected}.sdk`);
@@ -189,17 +264,16 @@ function ensureSDK() {
 
   deleteDir(SDKZip);
 
+  removeUnusedSDKs();
+  maybeRemoveOldXcodes();
+
   return eventualVersionedPath;
 }
 
 // Hash MacOSX.sdk directory zip with sha256.
 function hashFile(file) {
   console.log(`Calculating hash for ${color.path(file)}`);
-  return cp
-    .spawnSync('shasum', ['-a', '256', file])
-    .stdout.toString()
-    .split(' ')[0]
-    .trim();
+  return cp.spawnSync('shasum', ['-a', '256', file]).stdout.toString().split(' ')[0].trim();
 }
 
 module.exports = {

@@ -70,7 +70,7 @@ function eInitRunner(execOptions) {
       args.push('--force');
       return o;
     },
-    fork: name => {
+    fork: (name) => {
       args.push(`--fork=${name}`);
       return o;
     },
@@ -78,23 +78,19 @@ function eInitRunner(execOptions) {
       args.push(`--use-https`);
       return o;
     },
-    import: val => {
+    import: (val) => {
       args.push('--import', val);
       return o;
     },
-    name: name => {
+    name: (name) => {
       args.push(name);
       return o;
     },
-    out: val => {
+    out: (val) => {
       args.push('--out', val);
       return o;
     },
-    onlySdk: () => {
-      args.push('--only-sdk');
-      return o;
-    },
-    root: val => {
+    root: (val) => {
       args.push('--root', val);
       return o;
     },
@@ -176,7 +172,7 @@ function eShowRunner(execOptions) {
     run: () => {
       return runSync([cmd, ...args], { ...execOptions, stdio });
     },
-    src: name => {
+    src: (name) => {
       args.push('src');
       if (name) args.push(name);
       return o;
@@ -216,7 +212,7 @@ function eRemoveRunner(execOptions) {
   const args = ['remove'];
 
   const o = {
-    name: name => {
+    name: (name) => {
       args.push(name);
       return o;
     },
@@ -271,10 +267,7 @@ function createSandbox() {
     eRemoveRunner: () => {
       return eRemoveRunner(execOptions);
     },
-    randomString: () =>
-      Math.random()
-        .toString(36)
-        .substring(2, 15),
+    randomString: () => Math.random().toString(36).substring(2, 15),
     tmpdir,
   };
 }

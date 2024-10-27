@@ -14,7 +14,7 @@ const { fatal } = require('./utils/logging');
 program
   .arguments('[pr]')
   .description('Assists with manual backport processes')
-  .action(async prNumberStr => {
+  .action(async (prNumberStr) => {
     const prNumber = parseInt(prNumberStr, 10);
     if (isNaN(prNumber) || `${prNumber}` !== prNumberStr) {
       fatal(`backport requires a number, "${prNumberStr}" was provided`);
@@ -36,8 +36,8 @@ program
     }
 
     const targetBranches = pr.labels
-      .filter(label => label.name.startsWith('needs-manual-bp/'))
-      .map(label => label.name.substring(16));
+      .filter((label) => label.name.startsWith('needs-manual-bp/'))
+      .map((label) => label.name.substring(16));
     if (targetBranches.length === 0) {
       fatal('The given pull request is not needing any manual backports yet');
       return;
@@ -74,6 +74,12 @@ program
     const ensureLatestResult = spawnSync(config, 'git', ['pull', 'origin', targetBranch], gitOpts);
     if (ensureLatestResult.status !== 0) {
       fatal('Failed to update base branch');
+      return;
+    }
+
+    const ensureMergeRefLocal = spawnSync(config, 'git', ['fetch', 'origin', pr.base.ref], gitOpts);
+    if (ensureMergeRefLocal.status !== 0) {
+      fatal('Failed to fetch latest upstream');
       return;
     }
 

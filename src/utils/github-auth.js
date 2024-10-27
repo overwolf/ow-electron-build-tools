@@ -28,12 +28,14 @@ async function getGitHubAuthToken(scopes = []) {
     const authStatus = runGhCliCommand(['auth', 'status']);
 
     // Check that the scopes on the token include the requested scopes
-    const regexMatch = authStatus.match(/^.*Token scopes: (.*)$/gm);
+    const regexMatch = authStatus.match(/^.*Token scopes: (.*)$/m);
 
     if (regexMatch) {
-      const tokenScopes = regexMatch[0].split(',').map(scope => scope.trim());
+      const tokenScopes = regexMatch[1]
+        .split(',')
+        .map((item) => item.trim().replace(/^'(.*)'$/, '$1'));
 
-      if (scopes.every(scope => tokenScopes.includes(scope))) {
+      if (scopes.every((scope) => tokenScopes.includes(scope))) {
         return runGhCliCommand(['auth', 'token']).trim();
       } else {
         console.info(

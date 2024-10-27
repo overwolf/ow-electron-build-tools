@@ -14,7 +14,7 @@ const reclientHelperPath = path.resolve(
 );
 const rbeServiceAddress = 'rbe.notgoma.com:443';
 
-const CREDENTIAL_HELPER_TAG = 'v0.4.3';
+const CREDENTIAL_HELPER_TAG = 'v0.4.4';
 
 let usingRemote = true;
 
@@ -104,9 +104,18 @@ function reclientEnv(config) {
 
   let reclientEnv = {
     RBE_service: config.reclientServiceAddress || rbeServiceAddress,
+    RBE_credentials_helper: getHelperPath(config),
+    RBE_credentials_helper_args: 'print',
     RBE_experimental_credentials_helper: getHelperPath(config),
     RBE_experimental_credentials_helper_args: 'print',
   };
+
+  // When building Chromium, don't fail early on local fallbacks
+  // as they are expected.
+  if (config.defaultTarget === 'chrome') {
+    reclientEnv.RBE_fail_early_min_action_count = 0;
+    reclientEnv.RBE_fail_early_min_fallback_ratio = 0;
+  }
 
   const result = childProcess.spawnSync(reclientHelperPath, ['flags'], {
     stdio: 'pipe',

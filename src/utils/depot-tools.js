@@ -71,6 +71,7 @@ function platformOpts() {
       GYP_MSVS_HASH_1023ce2e82: '3a908a0f94',
       GYP_MSVS_HASH_27370823e7: '28622d16b1',
       GYP_MSVS_HASH_7393122652: '3ba76c5c20',
+      GYP_MSVS_HASH_698eb5635a: 'e2bf90edff',
     };
   }
 
@@ -99,11 +100,6 @@ function depotOpts(config, opts = {}) {
     ...require('./reclient').env(config),
   };
 
-  if (!config.onlySdk) {
-    // use build-tools version of Xcode
-    opts.env.DEVELOPER_DIR = require('./xcode').XcodePath;
-  }
-
   // put depot tools at the front of the path
   const key = pathKey();
   const paths = [DEPOT_TOOLS_DIR];
@@ -129,10 +125,12 @@ function depotSpawnSync(config, cmd, args, opts_in) {
   if (os.platform() === 'win32' && ['python', 'python3'].includes(cmd)) {
     cmd = `${cmd}.bat`;
   }
-  if (opts_in.msg) {
-    console.log(opts_in.msg);
-  } else {
-    console.log(color.childExec(cmd, args, opts));
+  if (!process.env.ELECTRON_DEPOT_TOOLS_DISABLE_LOG) {
+    if (opts_in.msg) {
+      console.log(opts_in.msg);
+    } else {
+      console.log(color.childExec(cmd, args, opts));
+    }
   }
   return childProcess.spawnSync(cmd, args, opts);
 }
