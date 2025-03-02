@@ -16,7 +16,10 @@ function getGNArgs(config) {
   const configArgs = config.gen.args;
 
   if (process.platform === 'darwin') {
-    configArgs.push(`mac_sdk_path = "${ensureSDKAndSymlink(config)}"`);
+    const sdkArg = `mac_sdk_path = "${ensureSDKAndSymlink(config)}"`;
+    if (!configArgs.includes(sdkArg)) {
+      configArgs.push(sdkArg);
+    }
   }
 
   // GN_EXTRA_ARGS is a list of GN args to append to the default args.
@@ -96,6 +99,15 @@ program
       const config = evmConfig.current();
 
       reclient.usingRemote = options.remote;
+
+      const winToolchainOverride = process.env.ELECTRON_DEPOT_TOOLS_WIN_TOOLCHAIN;
+      if (os.platform() === 'win32' && winToolchainOverride === '0') {
+        config.reclient = 'none';
+        reclient.usingRemote = false;
+        console.warn(
+          `${color.warn} Build without remote execution when defined ${color.config('ELECTRON_DEPOT_TOOLS_WIN_TOOLCHAIN=0')} in environment variables.`,
+        );
+      }
 
       reclient.downloadAndPrepare(config);
 

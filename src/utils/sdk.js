@@ -12,9 +12,13 @@ const { deleteDir } = require('./paths');
 const SDKDir = path.resolve(__dirname, '..', '..', 'third_party', 'SDKs');
 const SDKZip = path.resolve(SDKDir, 'MacOSX.sdk.zip');
 
-const XcodeBaseURL = 'https://dev-cdn.electronjs.org/xcode/';
+const XcodeBaseURL = 'https://dev-cdn-experimental.electronjs.org/xcode/';
 
 const SDKs = {
+  '15.1': {
+    fileName: 'MacOSX-15.1.sdk.zip',
+    sha256: 'fa67911382aa7be63c7045286173120c4b7c687a3c209579d9d83b9822bbac59',
+  },
   '15.0': {
     fileName: 'MacOSX-15.0.sdk.zip',
     sha256: '03d6d8d9a06aebee886cf136168ccbdb8579b80f7193376a36075ddde06abd88',
@@ -84,16 +88,9 @@ function maybeRemoveOldXcodes() {
 
 // Extract the SDK version from the toolchain file and normalize it.
 function extractSDKVersion(toolchainFile) {
-  if (!fs.existsSync(toolchainFile)) {
-    return null;
-  }
-
   const contents = fs.readFileSync(toolchainFile, 'utf8');
   const match = /macOS\s(\d+(\.\d+)?)\sSDK\n\#/.exec(contents);
-
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   return match[1].includes('.') ? match[1] : `${match[1]}.0`;
 }
@@ -103,14 +100,22 @@ function expectedSDKVersion() {
 
   // The current Xcode version and associated SDK can be found in build/mac_toolchain.py.
   const macToolchainPy = path.resolve(root, 'src', 'build', 'mac_toolchain.py');
-  const version = extractSDKVersion(macToolchainPy);
+  if (!fs.existsSync(macToolchainPy)) {
+    console.warn(
+      color.warn,
+      `Could not find ${color.path(macToolchainPy)} - falling back to default of`,
+      fallbackSDK(),
+    );
+    return fallbackSDK();
+  }
 
+  const version = extractSDKVersion(macToolchainPy);
   if (isNaN(Number(version)) || !SDKs[version]) {
     console.warn(
       color.warn,
       `Automatically detected an unknown macOS SDK ${color.path(
-        version,
-      )} - falling back to default of`,
+        version ? `${version} ` : '',
+      )}- falling back to default of`,
       fallbackSDK(),
     );
     return fallbackSDK();
